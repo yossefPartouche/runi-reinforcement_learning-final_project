@@ -1,5 +1,5 @@
 import time
-from src.agent import BaseAgent
+from src.agents.agent import BaseAgent
 
 
 # todo: docstrings

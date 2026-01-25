@@ -1,6 +1,6 @@
 from src.utils import set_random_seed, Logger, get_device
-from src.agent import BaseAgent
-from src.trainer import train
+from src.agents.agent import BaseAgent
+from src.training.trainer import train
 from src.template import SimpleGridEnv, pre_process
 
 def main():
