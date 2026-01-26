@@ -1,6 +1,7 @@
 numpy
 matplotlib
 torch
+torchvision
 gymnasium
 minigrid
 imageio
@@ -9,3 +10,5 @@ ipython
 pygame
 pyvirtualdisplay
 opencv-python
+jupyter
+pyyaml

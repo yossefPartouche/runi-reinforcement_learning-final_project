@@ -11,7 +11,7 @@ class BaseAgent(ABC):
     def __init__(self, config: Dict, obs_shape: np.ndarray, num_actions: int, device: torch.device):
         self.config = config
         self.device = device
-        self.state_shape = state_shape
+        self.state_shape = obs_shape
         self.num_actions = num_actions
         # todo: init model + buffer
     
