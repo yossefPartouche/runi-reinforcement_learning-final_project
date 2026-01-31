@@ -5,15 +5,13 @@ import torch
 class MiniGridCNN(nn.Module):
     """CNN for processing MiniGrid observations and outputting Q-values"""
 
-    def __init__(self, input_shape: np.ndarray, num_actions: int):
+    def __init__(self, input_shape: tuple, num_actions: int):
         """
         Args:
             input_shape: Shape of preprocessed observation (C, H, W) e.g., (1, 320, 320)
             num_actions: Number of possible actions (3 or 5)
         """
         super().__init__()
-        # todo: define Conv layers according to input_shape
-        # todo: define FC layers to output num_actions
         self.conv = nn.Sequential(
             nn.Conv2d(input_shape[0], 32, kernel_size=4),
             nn.ReLU(),
@@ -38,12 +36,12 @@ class MiniGridCNN(nn.Module):
             return int(np.prod(output.size()))
         
     def forward(self, x):
-         """
+        """
         Args:
             x: Batch of observations (B, C, H, W)
         Returns:
             Q-values for each action (B, num_actions)
         """
-         x = self.conv(x)
-         x = x.view(x.size(0), -1)
-         return self.fc(x)
+        x = self.conv(x)
+        x = x.view(x.size(0), -1)
+        return self.fc(x)

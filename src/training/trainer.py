@@ -45,7 +45,7 @@ def train(env, agent: BaseAgent, logger: Logger, config: Dict[str, Any]) -> None
     print(f"Starting training: {config['algo']} agent on {config['env_name']}")
     print("="*70)
     
-    num_episodes = config['episodes']
+    num_episodes = config['num_episodes']
     log_interval = config.get('log_interval', 10)
     save_interval = config.get('save_interval', 500)
 

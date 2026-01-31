@@ -54,7 +54,7 @@ class SimpleGridEnv(BaseMiniGridEnv):
         self.observation_space = spaces.Box(
             low=0,
             high=1.0,
-            shape=(84, 84, 1),
+            shape=(1, 84, 84),
             dtype=np.float32
         )
         # ╔═════════════════════════════════════════════════════════════════════╗

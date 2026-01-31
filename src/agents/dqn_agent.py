@@ -58,10 +58,13 @@ from src.models.replay_buffer import ReplayBuffer
 
 class DQNAgent(BaseAgent):
     """
-    Deep Q-Network agent for MiniGrid environments.
+    Initialize DQN Agent.
     
-    Uses a convolutional neural network to approximate Q-values from pixel observations,
-    with experience replay and target network for stable training.
+    Args:
+        observation_shape: Shape from env.observation_space.shape (H, W, C) format
+        num_actions: Number of possible actions
+        config: Configuration dictionary
+        device: PyTorch device (cpu/cuda/mps)
     """
     def __init__(self, observation_shape: tuple, num_actions: int, config: dict, device: str = 'cpu'):
         """
@@ -80,7 +83,10 @@ class DQNAgent(BaseAgent):
                    - min_buffer_size: Minimum samples before training starts (default: 1000)
             device: Device to run on ('cpu', 'mps', or 'cuda')
         """
-        super().__init__(observation_shape, num_actions, config, device)
+        self.device = device
+        self.num_actions = num_actions
+
+        self.observation_shape = observation_shape
 
         # Extract hyperparameters from config with defaults
         self.gamma = config.get('gamma', 0.99)  # Discount factor
@@ -92,17 +98,16 @@ class DQNAgent(BaseAgent):
 
         self.q_network = MiniGridCNN(observation_shape, num_actions).to(device)
 
-        self.target_network = copy.deepcopy(self.q_network)
-
+        self.target_network = MiniGridCNN(self.observation_shape, num_actions).to(device)
+        self.target_network.load_state_dict(self.q_network.state_dict())
         self.target_network.eval()
 
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
-
+        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
+        self.steps = 0
+        self.config = config
 
-        self.buffer = ReplayBuffer(capacity=self.buffer_capacity,
-                                   observation_shape=observation_shape,
-                                   device=device)
+        self.buffer = ReplayBuffer(self.buffer_capacity, self.observation_shape, device=self.device)
         
         self.training_step = 0
         self.loss_history =[]
@@ -126,17 +131,11 @@ class DQNAgent(BaseAgent):
         
         # Greedy action Inference Choice
         with torch.no_grad():
-            
-            #  (C, H, W) -> (1, C, H, W)
-            obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
-
+            obs_tensor = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
             # Forward pass
             q_values = self.q_network(obs_tensor)
-
             # Choosing greedy choice
-            action = q_values.argmax(dim=1).item()
-
-        return action
+            return q_values.argmax().item()
     
     def store_transition(self, observation:np.ndarray, action: int, reward:float,
                          next_observation: np.ndarray, done:bool):
@@ -180,8 +179,10 @@ class DQNAgent(BaseAgent):
         """
         self.store_transition(obs, action, reward, next_obs, done)
 
-        if not self.buffer.is_ready(max(self.batch_size, self.min_buffer_size)):
-            return {'loss':0.0, 'q_value':0.0,'target_q_value':0.0}
+        self.steps += 1
+
+        if len(self.buffer) < self.min_buffer_size:
+            return
         
         batch = self.buffer.sample(self.batch_size)
         observations, actions, rewards, next_observations, dones = batch
@@ -220,6 +221,7 @@ class DQNAgent(BaseAgent):
             'q_value': current_q_values.mean().item(),
             'target_q_value': target_q_values.mean().item()
         }
+
     def save(self, path: str):
         """
         Save agent state to file.
