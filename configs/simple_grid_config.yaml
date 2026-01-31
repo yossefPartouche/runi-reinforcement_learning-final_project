@@ -1,0 +1,28 @@
+# Environment Configuration
+env_name: 'SimpleGridEnv'
+env_size: 10
+max_steps: 1000
+
+# Algorithm
+algo: 'DQN'
+
+# Training Configuration
+num_episodes: 5000
+seed: 42
+
+# DQN Hyperparameters
+gamma: 0.99                  # Discount factor
+learning_rate: 0.0001        # Adam optimizer learning rate
+batch_size: 32               # Minibatch size
+buffer_capacity: 100000      # Replay buffer max size
+min_buffer_size: 1000        # Start training after this many samples
+target_update_freq: 1000     # Update target network every N steps
+
+# Exploration (Epsilon-Greedy)
+epsilon_start: 1.0           # Initial exploration rate (100% random)
+epsilon_end: 0.01            # Final exploration rate (1% random)
+epsilon_decay: 0.995         # Multiplicative decay per episode
+
+# Logging & Checkpointing
+log_interval: 10             # Log metrics every N episodes
+save_interval: 500           # Save checkpoint every N episodes
