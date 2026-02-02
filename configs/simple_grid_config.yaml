@@ -1,13 +1,13 @@
 # Environment Configuration
 env_name: 'SimpleGridEnv'
 env_size: 10
-max_steps: 1000
+max_steps: 100
 
 # Algorithm
 algo: 'DQN'
 
 # Training Configuration
-num_episodes: 5000
+num_episodes: 100
 seed: 42
 
 # DQN Hyperparameters

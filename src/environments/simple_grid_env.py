@@ -132,7 +132,7 @@ class SimpleGridEnv(BaseMiniGridEnv):
         if terminated:
             reward = 1.0
         else:
-            reward = 0.0
+            reward = -0.01
         # ----- REWARD SHAPING: EDIT ABOVE THIS LINE -----
 
         return self._get_obs(obs), reward, terminated, truncated, info
