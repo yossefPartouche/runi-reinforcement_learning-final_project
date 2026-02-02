@@ -6,6 +6,8 @@ from src.training.trainer import train
 from src.environments.simple_grid_env import SimpleGridEnv
 from src.environments.key_door_ball_env import KeyDoorBallEnv
 from src.preprocessing.image_preprocessing import preprocess_observation
+from src.utils.visualization import plot_training_progress  # ← ADD THIS
+from src.evaluation.video_recoder import record_agent_video 
 
 def main():
 
@@ -77,11 +79,46 @@ def main():
     # run training
     train(env=env, agent=agent, logger=logger, config=config)
 
-    agent.save(f"checkpoints/{config['env_name']}_{config['algo']}_final.pt")
+    final_checkpoint = f"checkpoints/{config['env_name']}_{config['algo']}_final.pt"
+    agent.save(final_checkpoint)
 
     print("\n" + "="*50)
     print("Training complete!")
     print("="*50)
+
+    # ======================
+    # POST-TRAINING ANALYSIS
+    # ======================
+    print("\n" + "="*50)
+    print("Generating training plots...")
+    print("="*50)
+
+    log_file = logger.log_file
+    plot_training_progress(log_file, save_dir='results/plots')
+
+    # 2. Record video of trained agent
+    print("\n" + "="*50)
+    print("Recording agent video...")
+    print("="*50)
+    video_path = record_agent_video(
+        env=env,
+        agent=agent,
+        num_episodes=3,
+        max_steps=config['max_steps'],
+        save_path='results/videos',
+        filename=f"{config['env_name']}_{config['algo']}_trained.mp4",
+        fps=10
+    )
+
+    print("\n" + "="*50)
+    print("Analysis Complete")
+    print("="*50)
+    print(f"Training plots: results/plots/")
+    print(f"Agent video: {video_path}")
+    print(f"Final checkpoint: {final_checkpoint}")
+    print(f"Training log: {log_file}")
+    print("="*50)
+
 
 if __name__ == "__main__":
     main()
