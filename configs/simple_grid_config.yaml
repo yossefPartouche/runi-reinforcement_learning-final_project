@@ -7,7 +7,7 @@ max_steps: 100
 algo: 'DQN'
 
 # Training Configuration
-num_episodes: 100
+num_episodes: 200
 seed: 42
 
 # DQN Hyperparameters
