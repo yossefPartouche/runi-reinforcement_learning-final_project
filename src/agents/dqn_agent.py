@@ -52,11 +52,11 @@ import torch.optim as optim
 from typing import Dict, Tuple
 import copy
 
-from src.agents.agent import BaseAgent
+from src.agents.agent import Agent
 from src.models.networks import MiniGridCNN
 from src.models.replay_buffer import ReplayBuffer
 
-class DQNAgent(BaseAgent):
+class DQNAgent(Agent):
     """
     Initialize DQN Agent.
     

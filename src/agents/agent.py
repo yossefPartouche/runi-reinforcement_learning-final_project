@@ -3,25 +3,22 @@ import numpy as np
 import torch
 from typing import Dict
 
-# todo: docstrings
-# todo: type hints
-class BaseAgent(ABC):
-    """Abstract base class for all RL agents"""
 
-    def __init__(self, observation_shape: tuple, num_actions: int, config: dict, device: str = 'cpu'):
+class Agent(ABC):
+    """
+        Abstract base class for all RL agents.
+        
+        REQUIRED methods (all agents must implement):
+        - choose_action()
+        - update()
+        - save()
+        - load()
+        
+        OPTIONAL methods (override if needed):
+        - step()              <- Only for off-policy (DQN)
+        - store_transition()  <- Only for replay buffer (DQN)
         """
-        Args:
-            observation_shape: Shape of preprocessed observation (C, H, W)
-            num_actions: Number of possible actions
-            config: Configuration dictionary with hyperparameters
-            device: Device to run on ('cpu' or 'mps' or 'cuda')
-        """
-        self.config = config
-        self.device = device
-        self.state_shape = observation_shape
-        self.num_actions = num_actions
-        self.training_step = 0
-        # todo: init model + buffer
+    
     
     @abstractmethod
     def choose_action(self, obs, epsilon: float =0.0) -> int:
@@ -29,18 +26,55 @@ class BaseAgent(ABC):
         Select action given observation
         
         Args:
-            observation: Preprocessed observation
-            epsilon: Exploration rate (0 = greedy, 1 = random)
+            obs: Preprocessed observation
+            **kwargs: Algorithm-specific parameters
+                - epsilon (float): For DQN exploration
+                - deterministic (bool): For evaluation
             
         Returns:
-            Selected action index
+            Selected action index (int)
+        
+        Example:
+            # DQN
+            action = agent.choose_action(obs, epsilon=0.1)
+            
+            # A2C
+            action = agent.choose_action(obs)
         """
         pass
 
     @abstractmethod
-    def store_transition(self, observation, action, reward, next_observation, done):
+    def update(self, *args, **kwargs):  # ← Add this (was missing!)
         """
-        Store a transition in memory
+        Update agent parameters based on experience.
+        
+        Args:
+            *args, **kwargs: Algorithm-specific data
+                - DQN: batch (dict) from replay buffer
+                - A2C: trajectories (list) from episode
+        
+        Returns:
+            dict: Loss values and metrics
+        """
+        pass
+
+    @abstractmethod
+    def save(self, path: str):
+        """Save agent state to file."""
+        pass
+
+    @abstractmethod
+    def load(self, filepath:str):
+        """Load agent parameters."""
+        pass
+
+    # OPTIONAL
+
+    def store_transition(self, observation, action, reward, next_observation, done):  # ← Remove @abstractmethod
+        """
+        Optional: Store a transition in memory (for off-policy algorithms).
+        
+        Only DQN needs this - A2C updates per episode and doesn't store.
         
         Args:
             observation: Current state
@@ -49,29 +83,29 @@ class BaseAgent(ABC):
             next_observation: Next state
             done: Whether episode terminated
         """
-        pass
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement store_transition(). "
+            "This is only needed for replay buffer-based algorithms."
+        )
     
-    @abstractmethod
-    def step(self, obs, action: int, reward: float, next_obs, done):
+    def step(self, obs, action: int, reward: float, next_obs, done):  # ← Remove @abstractmethod
         """
-        Store a transition in memory
+        Optional: Store and train in one call (for off-policy algorithms).
+        
+        This combines store_transition() + update() in one method.
+        Only needed for algorithms that update after every environment step.
         
         Args:
-            state: Current state
+            obs: Current state
             action: Action taken
             reward: Reward received
-            next_state: Next state
+            next_obs: Next state
             done: Whether episode terminated
             
         Returns:
-            Training metrics (dict)
+            dict: Training metrics (loss, q_values, etc.)
         """
-        pass
-        
-    def save(self, path: str):
-        pass
-
-    @abstractmethod
-    def load(self, filepath):
-        """Load agent parameters."""
-        pass
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement step(). "
+            "This is only needed for per-step update algorithms (DQN)."
+        )

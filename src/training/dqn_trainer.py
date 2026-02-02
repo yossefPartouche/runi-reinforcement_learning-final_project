@@ -3,14 +3,10 @@ Generic training loop for different types of agents that'll be implemented
 """
 import time
 from typing import Dict, Any, Optional 
-from src.agents.agent import BaseAgent
+from src.agents.agent import Agent
 from src.utils import Logger
 
-
-# todo: docstrings
-# todo: type hints
-
-def train(env, agent: BaseAgent, logger: Logger, config: Dict[str, Any]) -> None:
+def train(env, agent: Agent, logger: Logger, config: Dict[str, Any]) -> None:
     """
     Train RL Agents on given environment
 
@@ -18,7 +14,7 @@ def train(env, agent: BaseAgent, logger: Logger, config: Dict[str, Any]) -> None
 
     Args:
         env: Gymnasium environment
-        agent: Agent implementing BaseAgent interface with:
+        agent: Agent implementing Agent interface with:
             - choose_action(obs, epsilon=None) -> action
             - step(obs, action, reward, next_obs, done) -> None
             - save(path) -> None
