@@ -1,7 +1,11 @@
 """
 Standalone script to analyze training results and generate visualizations.
-Run this after training is complete.
 """
+import sys
+from pathlib import Path
+
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 import yaml
 import torch
@@ -17,9 +21,9 @@ def main():
     # ========================================
     # CONFIGURATION
     # ========================================
-    config_path = 'configs/simple_grid_config.yaml'
-    log_file = 'logs/SimpleGridEnv_DQN.csv'
-    checkpoint_path = 'checkpoints/SimpleGridEnv_DQN_final.pt'
+    config_path = 'configs/key_door_ball_config.yaml'
+    log_file = 'logs/KeyDoorBallEnv_A2C.csv'
+    checkpoint_path = 'checkpoints/KeyDoorBallEnv/best_agent.pt'
     
     # Load config
     with open(config_path, 'r') as f:

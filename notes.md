@@ -119,6 +119,33 @@ trainer_map = {
 
 ---
 
+FEB 4
 
+Working on KeyDoorBall environment with A2C agent. Agent successfully completes first 2 subtasks (key pickup + door opening) but fails to cross the door.
 
+### Investigation
+**Hypothesis**: Agent wastes actions through inefficient movement  
+**Tool**: Created `analyze_actions.py` to track action patterns  
+**Finding**: Confirmed - agent exhibits high turn-back behavior (turning left then immediately right, or vice versa)
 
+### Initial Fix (v1)
+- Added turn-back penalty: -0.05
+- Added forward movement reward: +0.002
+- Added door-crossing urgency penalties
+- **Result**: Minimal improvement (~0.2-0.3 reduction in wasteful actions)
+
+### Aggressive Fix (v2) - Current
+**Problem Metrics**:
+- Turn-backs: 15.93/episode
+- Turn/move ratio: 1.99 (agent turns 2x more than it moves)
+
+**Changes**:
+- Stronger turn-back penalties: -0.10 base, progressive up to -0.25
+- Higher forward reward: +0.005
+- Increased door-crossing penalties: up to -0.40
+- Extended training: 250 steps/episode, 2000 episodes
+- Higher exploration: entropy_coef 0.1
+- Fixed visualization scripts (layouts + path resolution)
+
+### Key Insight
+Agent's problem isn't total turning (39.8% of actions), but *wasteful* turning (constant direction reversal = indecision). Progressive penalties aims to teach commitment to decisions.

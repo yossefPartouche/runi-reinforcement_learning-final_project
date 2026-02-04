@@ -185,10 +185,10 @@ def main():
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
     except FileNotFoundError:
-        print(f"❌ Error: Config file not found at {config_path}")
+        print(f" Error: Config file not found at {config_path}")
         return
     except yaml.YAMLError as e:
-        print(f"❌ Error parsing YAML config: {e}")
+        print(f" Error parsing YAML config: {e}")
         return
     
     # -------------------------------------------------------------------------

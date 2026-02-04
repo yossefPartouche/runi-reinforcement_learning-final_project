@@ -31,21 +31,21 @@ save_interval: 500           # Save checkpoint every N episodes
 # Environment Configuration
 env_name: 'KeyDoorBallEnv'
 env_size: 10
-max_steps: 100  # Multi-step task needs more steps
+max_steps: 300  # Multi-step task needs more steps
 
 # Algorithm
 algo: 'A2C'
 
 # Training Configuration
-num_episodes: 30  # A2C typically needs more episodes than DQN
+num_episodes: 1500
 seed: 42
 n_steps: null  # null = update after full episode, or set to 5-20 for n-step updates
 
 # A2C Hyperparameters
 gamma: 0.99              # Discount factor
-learning_rate: 0.0003    # Learning rate (higher than DQN)
+learning_rate: 0.0003    # Learning rate 
 value_loss_coef: 0.5     # Coefficient for critic loss
-entropy_coef: 0.01       # Entropy bonus for exploration
+entropy_coef: 0.1      # Entropy bonus for exploration
 max_grad_norm: 0.5       # Gradient clipping threshold
 
 # Logging
