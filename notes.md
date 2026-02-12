@@ -149,3 +149,23 @@ Working on KeyDoorBall environment with A2C agent. Agent successfully completes 
 
 ### Key Insight
 Agent's problem isn't total turning (39.8% of actions), but *wasteful* turning (constant direction reversal = indecision). Progressive penalties aims to teach commitment to decisions.
+
+---
+
+FEB 12
+
+- Simplified the reward system, making it more sparse, at the critical points
+- Fixed farming problem of subrtasks reward shaping, by enforcing reward only once per completetion of subtask per episode
+- Cleaned variables duplication
+- Implemented milestone tracking systems, for subtasks across trainning session
+- Added milstone progress visualisation
+
+**Current result** after 1000 episodes of training A2C (max 300 steps per ep)
+
+783/1000 - key pickups
+246/1000 - door Opens
+89/1000 - Room Crossing
+25/1000 - Ball pickup
+2/1000 - Final Destination reached
+
+
