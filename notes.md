@@ -168,4 +168,16 @@ FEB 12
 25/1000 - Ball pickup
 2/1000 - Final Destination reached
 
+**Improvement** (Increased the number of episodes to 3000 and steps per episodes to 500)
 
+2666/3000 - key pickups (+10.6% Improvement)
+1608/3000 - door Opens (+29.0% Improvement)
+1044/3000 - Room Crossing (+25.9% Improvement)
+448/3000 - Ball pickup (+12.4% Improvement)
+238/3000 - Final Destination reached (+4.1% Improvement)
+
+### Key Insights
+1. **Time matters**: 300 steps wasn't enough for full navigation sequence
+2. **Data matters**: Agent needed 3x more episodes to learn task dependencies
+3. **No reward shaping needed yet**: Sparse rewards + more data worked well
+4. **Bottleneck shifted**: Now stuck at ball pickup → goal (29% conditional success)
