@@ -1,5 +1,6 @@
 import yaml
 import torch
+from pathlib import Path
 from src.utils import set_random_seed, Logger, get_device
 from src.agents.dqn_agent import DQNAgent
 from src.agents.a2c_agent import A2CAgent
@@ -8,8 +9,8 @@ from src.training.a2c_trainer import train_a2c
 from src.environments.simple_grid_env import SimpleGridEnv
 from src.environments.key_door_ball_env import KeyDoorBallEnv
 from src.preprocessing.image_preprocessing import preprocess_observation
-from src.utils.visualization import plot_training_progress
 from src.evaluation.video_recoder import record_agent_video
+from src.utils.visualization import plot_milestone_progress 
 
 def create_environment(config):
     """
@@ -254,14 +255,14 @@ def main():
     print(f"{'POST-TRAINING ANALYSIS':^80}")
     print("=" * 80)
     
-    # Generate training plots
-    print("\n📊 Generating training plots...")
-    try:
-        log_file = logger.log_file
-        plot_training_progress(log_file, save_dir='results/plots')
-        print("Training plots saved to results/plots/")
-    except Exception as e:
-        print(f" Warning: Could not generate plots: {e}")
+    print("\n📊 Generating milestone visualization...")
+    log_file = logger.log_file  # Define log_file here
+    milestone_file = log_file.replace('.csv', '_milestones.csv')
+    if Path(milestone_file).exists():
+        plot_milestone_progress(milestone_file, save_dir='results/plots')
+        print("✅ Milestone plot saved to results/plots/")
+    else:
+        print(f"⚠️  Milestone file not found: {milestone_file}")
     
     # Record agent video
     print("\n🎬 Recording agent video...")

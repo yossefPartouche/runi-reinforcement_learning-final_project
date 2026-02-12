@@ -37,7 +37,7 @@ max_steps: 300  # Multi-step task needs more steps
 algo: 'A2C'
 
 # Training Configuration
-num_episodes: 1500
+num_episodes: 1000
 seed: 42
 n_steps: null  # null = update after full episode, or set to 5-20 for n-step updates
 
@@ -49,5 +49,5 @@ entropy_coef: 0.1      # Entropy bonus for exploration
 max_grad_norm: 0.5       # Gradient clipping threshold
 
 # Logging
-log_interval: 10         # Print stats every N episodes
+log_interval: 25        # Print stats every N episodes
 save_interval: 250       # Save checkpoint every N episodes

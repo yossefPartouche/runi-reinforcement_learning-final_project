@@ -9,7 +9,7 @@ sys.path.insert(0, str(project_root))
 
 import yaml
 import torch
-from src.utils.visualization import plot_training_progress
+from src.utils.visualization import plot_milestone_progress
 from src.evaluation.video_recoder import record_agent_video
 from src.agents.dqn_agent import DQNAgent
 from src.environments.simple_grid_env import SimpleGridEnv
@@ -41,8 +41,12 @@ def main():
     # ========================================
     # 1. GENERATE TRAINING PLOTS
     # ========================================
-    print("\n📊 Generating training progress plots...")
-    plot_training_progress(log_file, save_dir='results/plots')
+    print("\n📊 Generating milestone progress plot...")
+    milestone_file = log_file.replace('.csv', '_milestones.csv')
+    if Path(milestone_file).exists():
+        plot_milestone_progress(milestone_file, save_dir='results/plots')
+    else:
+        print(f"⚠️ Milestone file not found: {milestone_file}")
     
     # ========================================
     # 2. LOAD TRAINED AGENT

@@ -79,9 +79,14 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         self.has_crossed_door = False
         
         # for analysis 
-        self.action_counts = {0: 0, 1:0, 2: 0, 3:0, 4:0}
+        self.action_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
         self.action_history = []
         self.prev_action = None
+
+        self.got_key_this_episode = False
+        self.opened_door_this_episode = False
+        self.got_ball_this_episode = False
+        self.reached_goal_this_episode = False
         # ╔═════════════════════════════════════════════════════════════════════╗
         # ║                     END OF EDITABLE SECTION                         ║
         # ╚═════════════════════════════════════════════════════════════════════╝
@@ -113,7 +118,13 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         for key in self.action_counts:
             self.action_counts[key] = 0
         self.prev_action = None
-        self.turnback_count = 0
+
+        self.got_key_this_episode = False
+        self.opened_door_this_episode = False
+        self.got_ball_this_episode = False
+        self.reached_goal_this_episode = False
+
+        #self.turnback_count = 0
 
         # Call parent reset, which internally calls _gen_grid()
         obs, info = super().reset(seed=seed, options=options)
@@ -177,36 +188,24 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
     # ║  ✅ STUDENT TODO: Modify reward shaping below                           ║
     # ╚═════════════════════════════════════════════════════════════════════════╝
     def step(self, action):
-        """
-        Step function with sparse reward.
-
-        Available helper methods for reward shaping:
-            - self.is_carrying_key()  : Returns True if agent has the key
-            - self.is_carrying_ball() : Returns True if agent has the ball
-            - self.is_door_open()     : Returns True if door is open
-            - self.prev_key           : Key status before this step
-            - self.prev_door          : Door status before this step
-            - self.prev_ball          : Ball status before this step
-
-        Current reward scheme (sparse):
-            - +1.0 for reaching goal with ball
-            - 0.0 otherwise
-
-        💡 You can add reward shaping here
-        """
+        """Step function with simplified reward shaping."""
         original_action = action
+        
         # Map action 4 to toggle (internal MiniGrid uses 5 for toggle)
         if action == 4:
             action = 5
 
-        # Track previous state for reward shaping
+        # Track previous state
         self.prev_key = self.is_carrying_key()
         self.prev_door = self.is_door_open()
         self.prev_ball = self.is_carrying_ball()
         prev_in_right_room = self.agent_pos[0] > self.partition_col
 
+        # Initialize tracking variables
         if not hasattr(self, 'prev_action'):
             self.prev_action = None
+        if not hasattr(self, 'turnback_count'):
+            self.turnback_count = 0
 
         # Handle ball pickup
         if action == 3:
@@ -215,110 +214,55 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         # Standard step
         obs, reward, terminated, truncated, info = super().step(action)
 
-        self.action_counts[original_action] +=1 
+        # Track actions
+        self.action_counts[original_action] += 1
         self.action_history.append(original_action)
 
-        # Goal only counts if ball is picked up (when required)
+        # Goal only counts if ball is picked up
         terminated = terminated and (not self.require_ball_pickup or self.is_carrying_ball())
 
+        # ----- SIMPLIFIED REWARD SHAPING -----
         reward = 0.0
-
-        # ANALYSIS BASED: Reduce wastful turning
-        if original_action in [0, 1]:
-            
-            if self.prev_action is not None:
-                if (original_action == 0 and self.prev_action == 1) or \
-               (original_action == 1 and self.prev_action == 0):
-                    
-                    self.turnback_count += 1
-
-                    if self.turnback_count == 1:
-                        penalty = -0.10  
-                    elif self.turnback_count == 2:
-                        penalty = -0.15
-                    elif self.turnback_count >= 3:
-                        penalty = -0.25 
-                    else:
-                        penalty = -0.10
-
-                    reward += penalty
-                    if self.step_count % 20 == 0:  # Occasional logging
-                        print(f"   Turn-back detected at step {self.step_count} (-0.05)")
-                else:
-                    # Reset counter if not turn-backing
-                    self.turnback_count = max(0, self.turnback_count - 1)
-
-        if original_action == 2:
-            reward += 0.005
-            self.turnback_count = max(0, self.turnback_count - 1)
-
-        if not self.prev_key and self.is_carrying_key():
-            reward += 0.3
-            print(f"Step {self.step_count}: Key picked up! (+0.3)")
-            self.turnback_count = 0 
-
-        if self.prev_key and not self.prev_door and self.is_door_open():
-            reward += 0.3
+        
+        if not self.prev_key and self.is_carrying_key() and not self.got_key_this_episode:
+            reward += 0.5
+            self.got_key_this_episode = True
+            print(f"🔑 Step {self.step_count}: Key picked up!")
+        
+        if self.prev_key and not self.prev_door and self.is_door_open() and not self.opened_door_this_episode:
+            reward += 0.5
             self.door_opened_step = self.step_count
-            print(f" Step {self.step_count}: Door opened! (+0.3)")
-            print(f"   Door crossing penalty now ACTIVE!")
-            self.turnback_count = 0 
+            self.opened_door_this_episode = True
+            print(f"🔑 🚪 Step {self.step_count}: Door opened!")
         
         current_in_right_room = self.agent_pos[0] > self.partition_col
 
-        # Agent Cross over "second room"
-        if not prev_in_right_room and current_in_right_room:
-            self.has_crossed_door = True
-            reward += 0.5
-            print(f" Step {self.step_count}: Crossed to right room! (+0.5)")
-            # Current test 
-            print(f"   Door crossing penalty DEACTIVATED!")
-            self.turnback_count = 0
-
-        if (self.door_opened_step is not None and 
-            not self.has_crossed_door and not current_in_right_room):
-            steps_since_door = self.step_count - self.door_opened_step
-
-            if steps_since_door <= 5:
-                penalty = -0.08
-            elif steps_since_door <= 15:
-                penalty = -0.20
-            else:
-                penalty =-0.40
-            
-            reward += penalty
-
-            # user update on the stuck in the mud state 
-            if steps_since_door % 3 == 0:
-                print(f"   Step {self.step_count}: Still in left room "
-                      f"({steps_since_door} steps since door opened) "
-                      f"Penalty: {penalty:.3f}")
-                
-        if not self.prev_ball and self.is_carrying_ball():
-            reward += 0.3
-            print(f" Step {self.step_count}: Ball picked up! (+0.3)")
-
-        # ----- REWARD SHAPING: EDIT BELOW THIS LINE -----
-        if terminated:
+        if not prev_in_right_room and current_in_right_room and not self.has_crossed_door:
             reward += 1.0
-            print(f"Step {self.step_count}: Goal reached! (+1.0)")
-
-            #  episode summary
-            if self.door_opened_step is not None:
-                if self.has_crossed_door:
-                    steps_to_cross = self.step_count - self.door_opened_step
-                    print(f"\n Episode Summary:")
-                    print(f"   Door opened:  Step {self.door_opened_step}")
-                    print(f"   Door crossed: Step {self.door_opened_step + steps_to_cross}")
-                    print(f"   Time to cross: {steps_to_cross} steps")
-                    print(f"   Total steps:  {self.step_count}\n")
-                else:
-                    print(f"\n  Episode ended without crossing door!")
+            self.has_crossed_door = True
+            print(f"🚪🚶‍➡️ Step {self.step_count}: Crossed to right room!")
         
-        reward -= 0.002
-
+        if not self.prev_ball and self.is_carrying_ball() and not self.got_ball_this_episode:
+            reward += 0.5
+            self.got_ball_this_episode = True
+            print(f"⚽️ Step {self.step_count}: Ball picked up!")
+        
+        if terminated and not self.reached_goal_this_episode:
+            reward += 2.0
+            self.reached_goal_this_episode = True
+            print(f"🎯Step {self.step_count}: Goal reached! (+2.0)")
+        
+        # 2. Single penalty: turn-backs only
+        if original_action in [0, 1] and self.prev_action is not None:
+            if (original_action == 0 and self.prev_action == 1) or \
+            (original_action == 1 and self.prev_action == 0):
+                reward -= 0.1
+        
+        # 3. Small time penalty
+        reward -= 0.001
+        
         self.prev_action = original_action
-        # ----- REWARD SHAPING: EDIT ABOVE THIS LINE -----
+        # ----- END REWARD SHAPING -----
 
         return self._get_obs(obs), reward, terminated, truncated, info
     # ╔═════════════════════════════════════════════════════════════════════════╗

@@ -56,6 +56,14 @@ def train_a2c(env, agent, logger, config):
         if len(trajectories) > 0:
             losses = agent.update(trajectories)
         
+        milestones = {
+            'got_key': env.got_key_this_episode,
+            'opened_door': env.opened_door_this_episode,
+            'crossed_door': env.has_crossed_door,
+            'got_ball': env.got_ball_this_episode,
+            'reached_goal': env.reached_goal_this_episode
+        }
+        
         # Logging
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_steps)
@@ -65,6 +73,7 @@ def train_a2c(env, agent, logger, config):
             reward=episode_reward,
             steps=episode_steps,
             epsilon=0.0,  # A2C doesn't use epsilon
+            milestones=milestones,
             **losses
         )
         

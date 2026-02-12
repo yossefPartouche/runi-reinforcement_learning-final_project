@@ -36,17 +36,41 @@ class Logger:
 
         self._extra_metrics : Dict[str, List[Any]] = {}
 
+        self._total_steps = 0
+
+        self.cumulative_key_pickups = 0
+        self.cumulative_door_opens = 0
+        self.cumulative_door_crosses = 0
+        self.cumulative_ball_pickups = 0
+        self.cumulative_goal_reaches = 0
+
+        self.milestone_history = {
+            'total_steps': [],
+            'key_pickups': [],
+            'door_opens': [],
+            'door_crosses': [],
+            'ball_pickups': [],
+            'goal_reaches': []
+        }
+
         # Create CSV file with header
         self.log_file = os.path.join(log_dir, f"{experiment_name}.csv")
+
+        self.milestone_file = os.path.join(log_dir, f"{experiment_name}_milestones.csv")
         self._init_csv()
     
     def _init_csv(self) -> None:
         """Initialize CSV file with header."""
+
         with open(self.log_file, 'w') as f:
             f.write("episode,reward,steps,duration,epsilon\n")
+
+        with open(self.milestone_file, 'w') as f:
+            f.write("episode,total_steps,cumulative_key_pickups,cumulative_door_opens,"
+                   "cumulative_door_crosses,cumulative_ball_pickups,cumulative_goal_reaches\n")
     
     def log(self, episode: int, reward: float, steps: int, 
-            duration: float = 0.0, epsilon: Optional[float] = None, 
+            duration: float = 0.0, epsilon: Optional[float] = None, milestones: Optional[Dict[str, bool]]=None, 
             **kwargs) -> None:
         """
         Log episode metrics.
@@ -64,6 +88,8 @@ class Logger:
         self.episode_steps.append(steps)
         self.episode_durations.append(duration)
 
+        self._total_steps += steps
+
         if epsilon is not None:
             self.epsilons.append(epsilon)
         
@@ -71,6 +97,27 @@ class Logger:
             if key not in self._extra_metrics:
                 self._extra_metrics[key] = []
             self._extra_metrics[key].append(value)
+
+        if milestones is not None:
+            if milestones.get('got_key', False):
+                self.cumulative_key_pickups += 1
+            if milestones.get('opened_door', False):
+                self.cumulative_door_opens += 1
+            if milestones.get('crossed_door', False):
+                self.cumulative_door_crosses += 1
+            if milestones.get('got_ball', False):
+                self.cumulative_ball_pickups += 1
+            if milestones.get('reached_goal', False):
+                self.cumulative_goal_reaches += 1
+            
+            self.milestone_history['total_steps'].append(self._total_steps)
+            self.milestone_history['key_pickups'].append(self.cumulative_key_pickups)
+            self.milestone_history['door_opens'].append(self.cumulative_door_opens)
+            self.milestone_history['door_crosses'].append(self.cumulative_door_crosses)
+            self.milestone_history['ball_pickups'].append(self.cumulative_ball_pickups)
+            self.milestone_history['goal_reaches'].append(self.cumulative_goal_reaches)
+
+            self._write_milestones_to_csv(episode)
 
         # Write to CSV
         self._write_to_csv(episode, reward, steps, duration, epsilon, **kwargs)
@@ -96,6 +143,18 @@ class Logger:
                     metrics.append(str(value))
             
             f.write(','.join(metrics) + '\n')
+
+    def _write_milestones_to_csv(self, episode: int) -> None:
+        """Write milestone counts to CSV."""
+        with open(self.milestone_file, 'a') as f:
+            f.write(f"{episode},{self.total_steps},"
+                   f"{self.cumulative_key_pickups},"
+                   f"{self.cumulative_door_opens},"
+                   f"{self.cumulative_door_crosses},"
+                   f"{self.cumulative_ball_pickups},"
+                   f"{self.cumulative_goal_reaches}\n")
+    
+    
     def get_average_reward(self, last_n: int = 100) -> float:
         """
         Calculate average reward over last N episodes.
