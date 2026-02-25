@@ -83,10 +83,14 @@ class DQNAgent(Agent):
                    - min_buffer_size: Minimum samples before training starts (default: 1000)
             device: Device to run on ('cpu', 'mps', or 'cuda')
         """
-        self.device = device
-        self.num_actions = num_actions
 
         self.observation_shape = observation_shape
+        self.num_actions = num_actions
+        self.config = config
+        self.device = device
+        
+
+        
 
         # Extract hyperparameters from config with defaults
         self.gamma = config.get('gamma', 0.99)  # Discount factor
@@ -105,7 +109,6 @@ class DQNAgent(Agent):
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
         self.steps = 0
-        self.config = config
 
         self.buffer = ReplayBuffer(self.buffer_capacity, self.observation_shape, device=self.device)
         

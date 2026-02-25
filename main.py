@@ -4,8 +4,10 @@ from pathlib import Path
 from src.utils import set_random_seed, Logger, get_device
 from src.agents.dqn_agent import DQNAgent
 from src.agents.a2c_agent import A2CAgent
+from src.agents.ppo_agent import PPOAgent
 from src.training.dqn_trainer import train
 from src.training.a2c_trainer import train_a2c
+from src.training.ppo_trainer import train_ppo
 from src.environments.simple_grid_env import SimpleGridEnv
 from src.environments.key_door_ball_env import KeyDoorBallEnv
 from src.preprocessing.image_preprocessing import preprocess_observation
@@ -72,6 +74,13 @@ def create_agent(observation_shape, num_actions, config, device):
             config=config,
             device=device
         )
+    elif algo == 'PPO':
+        agent = PPOAgent(
+            observation_shape=observation_shape,
+            num_actions=num_actions,
+            config=config,
+            device=device
+        )
     else:
         raise ValueError(f"Unknown algorithm: {algo}")
     
@@ -90,6 +99,7 @@ def get_trainer(algo):
     trainer_map = {
         'DQN': train,
         'A2C': train_a2c,
+        'PPO': train_ppo,
     }
     
     if algo not in trainer_map:

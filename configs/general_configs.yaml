@@ -1,0 +1,68 @@
+# Environment Configuration
+env_name: 'KeyDoorBallEnv'
+env_size: 10
+max_steps: 100
+
+# Algorithm
+algo: 'DQN'
+
+# Training Configuration
+num_episodes: 30
+seed: 42
+
+# DQN Hyperparameters
+gamma: 0.99                  # Discount factor
+learning_rate: 0.0001        # Adam optimizer learning rate
+batch_size: 32               # Minibatch size
+buffer_capacity: 100000      # Replay buffer max size
+min_buffer_size: 1000        # Start training after this many samples
+target_update_freq: 1000     # Update target network every N steps
+
+# Exploration (Epsilon-Greedy)
+use_epsilon: true            # DQN uses epsilon-greedy
+epsilon_start: 1.0           # Initial exploration rate (100% random)
+epsilon_end: 0.01            # Final exploration rate (1% random)
+epsilon_decay: 0.995         # Multiplicative decay per episode
+
+# Logging & Checkpointing
+log_interval: 10             # Log metrics every N episodes
+save_interval: 500           # Save checkpoint every N episodes
+
+# Environment Configuration
+env_name: 'KeyDoorBallEnv'
+env_size: 10
+max_steps: 500  # Multi-step task needs more steps
+
+# Algorithm
+algo: 'A2C'
+
+# Training Configuration
+num_episodes: 3000
+seed: 42
+n_steps: null  # null = update after full episode, or set to 5-20 for n-step updates
+
+# A2C Hyperparameters
+gamma: 0.99              # Discount factor
+learning_rate: 0.003    # Learning rate 
+value_loss_coef: 0.5     # Coefficient for critic loss
+entropy_coef: 0.1      # Entropy bonus for exploration
+max_grad_norm: 0.5       # Gradient clipping threshold
+
+# Logging
+log_interval: 25        # Print stats every N episodes
+save_interval: 250       # Save checkpoint every N episodes
+
+algo: 'PPO'
+
+gamma: 0.99
+learning_rate: 0.0003
+clip_eps: 0.2
+batch_size: 128
+gae_lambda: 0.95
+update_epochs: 4
+entropy_coef: 0.01
+value_loss_coef: 0.5
+max_grad_norm: 0.5
+num_episodes: 2000
+log_interval: 25
+save_interval: 250

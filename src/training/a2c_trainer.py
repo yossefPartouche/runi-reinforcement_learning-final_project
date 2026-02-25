@@ -7,14 +7,17 @@ def train_a2c(env, agent, logger, config):
     
     On-policy learning: updates after each episode using collected trajectories.
     """
-    num_episodes = config['num_episodes']
-    log_interval = config.get('log_interval', 10)
-    save_interval = config.get('save_interval', 500)
-    n_steps = config.get('n_steps', None)
+    
     
     print("=" * 70)
     print(f"Starting A2C training: {config['env_name']}")
     print("=" * 70)
+
+    num_episodes = config['num_episodes']
+    log_interval = config.get('log_interval', 10)
+    save_interval = config.get('save_interval', 500)
+    n_steps = config.get('n_steps', None)
+
     print(f"Episodes: {num_episodes}")
     print(f"Update: {'After each episode' if n_steps is None else f'Every {n_steps} steps'}")
     print(f"Gamma: {agent.gamma}")

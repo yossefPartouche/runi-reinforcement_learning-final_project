@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from src.agents.agent import Agent
 from src.models.networks import ActorCriticNetwork
+import os
 
 class A2CAgent(Agent):
     """
@@ -161,7 +162,6 @@ class A2CAgent(Agent):
     
     def save(self, filepath):
         """Save agent state."""
-        import os
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         torch.save({
