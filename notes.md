@@ -1,4 +1,4 @@
-JAN 21
+JAN 21 (Shay)
 
 Workflow:
 * Develop as a python project - separate scripts, easier git, less conflicts, more maintainable. Copy/export to notebook for necessary testing (when possible, run/test directly in the .py script to reduce copy/pasting) or even just for the final delivery.
@@ -6,7 +6,7 @@ Workflow:
 
 ---
 
-FEB 2
+FEB 2 (Yossi)
 
 ### 1. Multi-Agent Architecture Implemented
 - **Status**: ✅ Working
@@ -17,7 +17,7 @@ FEB 2
   - DQN uses replay buffer (off-policy)
   - A2C uses episode trajectories (on-policy)
 
-### 2. File Structure
+### 2. File Structure (Yossi's branch — later reorganized into flat `src/`)
 ```
 src/agents/
 ├── agent.py          # Base Agent class (4 required methods)
@@ -56,61 +56,7 @@ configs/
 - A2C: On-policy, uses trajectories, updates per episode
 - Easy to add PPO, SAC, etc. later
 
-### 4. Command-Line Interface
-```bash
-# Train A2C on KeyDoorBall (default)
-python main.py
-
-# Train DQN on SimpleGrid
-python main.py --config configs/simple_grid_config.yaml
-
-# Custom seed
-python main.py --config configs/simple_grid_config.yaml --seed 123
-```
-
-### 5. Next Steps (TODO)
-- [ ] Train A2C on KeyDoorBallEnv (1000 episodes)
-- [ ] Compare DQN vs A2C performance
-- [ ] Add reward shaping for KeyDoorBall
-- [ ] Implement PPO (optional)
-- [ ] Hyperparameter tuning
-
-
-## 🔑 Key Code Snippets
-
-### Adding a New Algorithm
-```python
-# 1. Create agent in src/agents/new_agent.py
-from src.agents.agent import Agent
-
-class NewAgent(Agent):
-    def choose_action(self, obs, **kwargs):
-        pass
-    def update(self, data):
-        pass
-    def save(self, filepath):
-        pass
-    def load(self, filepath):
-        pass
-
-# 2. Add to main.py create_agent()
-elif algo == 'NewAlgo':
-    agent = NewAgent(...)
-
-# 3. Add trainer to main.py get_trainer()
-trainer_map = {
-    'DQN': train,
-    'A2C': train_a2c,
-    'NewAlgo': train_new,  # ← Add this
-}
-```
-
-## Current Training Status
-- **DQN on SimpleGrid**: Working
-- **DQN on KeyDoorBall**: Not tested yet
-- **A2C on KeyDoorBall**: Ready to train
-
-## Common Issues Resolved
+### 4. Common Issues Resolved
 1. `BaseAgent` → ✅ `Agent` (renamed class)
 2. Abstract `step()` → ✅ Optional (only DQN needs it)
 3. Abstract `store_transition()` → ✅ Optional (only DQN needs it)
@@ -119,7 +65,7 @@ trainer_map = {
 
 ---
 
-FEB 4
+FEB 4 (Yossi)
 
 Working on KeyDoorBall environment with A2C agent. Agent successfully completes first 2 subtasks (key pickup + door opening) but fails to cross the door.
 
@@ -152,13 +98,13 @@ Agent's problem isn't total turning (39.8% of actions), but *wasteful* turning (
 
 ---
 
-FEB 12
+FEB 12 (Yossi)
 
 - Simplified the reward system, making it more sparse, at the critical points
-- Fixed farming problem of subrtasks reward shaping, by enforcing reward only once per completetion of subtask per episode
+- Fixed farming problem of subtasks reward shaping, by enforcing reward only once per completion of subtask per episode
 - Cleaned variables duplication
-- Implemented milestone tracking systems, for subtasks across trainning session
-- Added milstone progress visualisation
+- Implemented milestone tracking systems, for subtasks across training session
+- Added milestone progress visualisation
 
 **Current result** after 1000 episodes of training A2C (max 300 steps per ep)
 
@@ -181,3 +127,70 @@ FEB 12
 2. **Data matters**: Agent needed 3x more episodes to learn task dependencies
 3. **No reward shaping needed yet**: Sparse rewards + more data worked well
 4. **Bottleneck shifted**: Now stuck at ball pickup → goal (29% conditional success)
+
+---
+
+FEB 23 (Shay)
+
+### Codebase Integration: Yossi's branch → infra_merge
+
+Decided to keep Shaytanne's flat `src/` infra as the base and port Yossi's algorithmic work into it. Rationale:
+- Shaytanne's infra has batch experiment runner, isolated result folders, proper train/eval split, and richer analysis utils
+- Yossi's infra has better agent base class design, full checkpoint save/load, and good algorithmic implementations (DQN, A2C)
+- Manual port preferred over git merge due to divergent directory structures
+
+Ported from Yossi:
+- `BaseAgent` improvements: `update()` abstract, `load()` abstract, `step()` optional with descriptive error
+- `DQNAgent.save()` upgraded to full checkpoint (policy net, target net, optimizer, steps, epsilon, config)
+- `min_buffer_size` config param added to DQN training condition
+- `A2CAgent` class ported into `src/agent.py` (adapted to Shaytanne's H,W,C uint8 obs convention)
+- `ActorCriticNetwork` ported into `src/model.py` (accepts H,W,C, handles C,H,W transpose internally)
+- A2C training path added to `experiment_runner.py` via `use_per_step_update` flag
+- A2C wired into `_determine_agent_class()`
+
+Observation space decision: kept `(84, 84, 1) uint8` (H,W,C) convention throughout. Both DQNAgent and A2CAgent normalize + transpose internally in `choose_action()` and `update()`. No env change needed.
+
+---
+
+FEB 25 (Shay)
+
+### Phase 5: Reward Shaping + Experiment Configs
+
+#### Staff clarification received (FEB 25)
+Course staff explicitly expanded what's allowed in reward shaping:
+- Auxiliary variables permitted in `__init__`, `reset`, and `step` (not just the marked reward block)
+- Must represent discrete task-related events — NOT continuous/distance-based signals
+- Step penalty explicitly allowed
+- Distance to goal/key/door/ball explicitly prohibited
+
+#### KeyDoorBallEnv reward shaping implemented (`src/template.py`)
+Added to `__init__` and `reset()` (per staff clarification):
+- `prev_action` — tracks last action for turn-back penalty
+- `prev_pos` — tracks last position for room-crossing detection
+- `has_crossed_door` — one-time flag, prevents reward farming on room crossing
+
+Reward signals added to `step()`:
+| Signal | Value (default) | Trigger |
+|---|---|---|
+| `key` | +0.5 | Key pickup (transition: no key → have key) |
+| `door` | +0.5 | Door opened (transition: had key + door closed → door open) |
+| `room_crossing` | +1.0 | First crossing from left to right room (once per episode) |
+| `ball` | +0.5 | Ball pickup (transition: no ball → have ball) |
+| `goal` | +2.0 | Goal reached with ball |
+| `turn_penalty` | -0.1 | Immediate direction reversal (left→right or right→left) |
+| `step` | -0.001 | Every step (encourages shorter solutions) |
+
+Room-crossing implemented as binary discrete check (`agent_pos[0] > partition_col`) — not distance-based, qualifies as "progressing between task stages" per staff clarification.
+
+#### Experiment configs updated (`src/experiments.py`)
+- Added `DQN_KEYDOORBALL_BASELINE` (experiment 7) with full reward shaping config
+- Updated `A2C_KEYDOORBALL_BASELINE` (renumbered to experiment 8) with full reward shaping config
+- Both KeyDoorBall configs include all 7 reward keys
+- SimpleGrid configs unchanged (only use `step` + `goal`)
+
+#### Phase 5 checklist status
+- ✅ Phases 1, 2, 3 (agent improvements, A2C, training loop) — done during infra merge
+- ✅ Phase 5 (reward shaping + env enhancements + obs space decision)
+- ⏭️ Phase 4 (PrioritizedReplayBuffer) — deferred, lowest priority
+- ⬜ Phase 6 (milestone logging/visualization) — pending
+- ⬜ Phase 8 (smoke tests) — next up
