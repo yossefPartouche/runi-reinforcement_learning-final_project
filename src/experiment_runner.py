@@ -102,9 +102,27 @@ class Experiment:
                     action, log_prob = action
 
                 # env step
-                next_obs, reward, terminated, truncated, _ = self.env.step(action)
+                next_obs, reward, terminated, truncated, info = self.env.step(action)
                 done = terminated or truncated
                 
+                # RETROACTIVE BONUS INJECTION 
+                if "retroactive_bonus" in info: 
+                    bonus_data = info["retroactive_bonus"]
+                    steps_back = bonus_data["steps_back"]
+                    bonus_val  = bonus_data["bonus"]
+
+                    limit = min(steps_back, len(trajectories))
+
+                    for i in range(1, limit + 1):
+                        # unpack ith episode
+                        p_obs, p_act, p_rew, p_nobs, p_done, p_logprob = trajectories[-i]
+                        # update reward with the bonus
+                        new_rew = p_rew + bonus_val
+                        # Repack the epsiode trajectory 
+                        trajectories[-i] = (p_obs, p_act, new_rew, p_nobs, p_done, p_logprob)
+                        
+                        episode_reward += bonus_val
+
                 # todo: base this condition on agent type?
                 # agent step
                 if update_per_step:

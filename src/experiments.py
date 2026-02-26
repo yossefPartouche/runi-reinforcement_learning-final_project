@@ -165,7 +165,7 @@ DQN_KEYDOORBALL_BASELINE = {
 }
 DQN_KEYDOORBALL_BASELINE["config"].update({
     "env_name": "KeyDoorBall",
-    "max_steps": 500,
+    "max_steps": 200,
     "training_episodes": 5000,
     "inference_episodes": 10,
     "reward_shaping": {
@@ -372,6 +372,66 @@ CALIB_C4_PPO_LOW_ENTROPY["config"].update({
     "entropy_coefficient": 0.001,
 })
 
+# =====================================================================
+#                       SET 2
+# =====================================================================
+SET2_MAX_STEPS = 400
+SET2_EPISODES = 2000
+SET2_INFERENCE_EPISODES = 50
+
+# PPO on KDB
+SET2_PPO_KDB = {
+    "name": "SET2_PPO_KDB",
+    "config": copy.deepcopy(PPO_BASE_CONFIG),
+}
+
+SET2_PPO_KDB["config"].update({
+    "env_name": "KeyDoorBall",
+    "training_episodes": SET2_EPISODES,
+    "inference_episodes": SET2_INFERENCE_EPISODES,
+    "max_steps": SET2_MAX_STEPS,
+    "reward_shaping": {
+        "key": 1.0, "door": 2.0, "room_crossing": 2.5,
+        "ball": 2.5, "goal": 5.0, "turn_penalty": 0.0, "step": 0.015,
+    },
+    "training_freq":    10,        # train (backprop) every N(=10) steps
+})
+
+SET2_A2C_KDB = {
+    "name": "SET2_A2C_KDB",
+    "config": copy.deepcopy(A2C_BASE_CONFIG),
+}
+
+SET2_A2C_KDB["config"].update({
+    "env_name": "KeyDoorBall",
+    "training_episodes": SET2_EPISODES,
+    "inference_episodes": SET2_INFERENCE_EPISODES,
+    "max_steps": SET2_MAX_STEPS,
+    "reward_shaping": {
+        "key": 0.5, "door": 0.5, "room_crossing": 1.0,
+        "ball": 0.5, "goal": 2.0, "turn_penalty": 0.1, "step": 0.015,
+    },
+    "training_freq":    10,        # train (backprop) every N(=10) steps
+})
+
+# DQN on KDB
+SET2_DQN_KDB = {
+    "name": "SET2_DQN_KDB",
+    "config": copy.deepcopy(PROJECT_BASE_CONFIG),
+}
+SET2_DQN_KDB["config"].update({
+    "env_name": "KeyDoorBall",
+    "training_episodes": SET2_EPISODES,
+    "inference_episodes": SET2_INFERENCE_EPISODES,
+    "max_steps": SET2_MAX_STEPS,
+    "reward_shaping": {
+        "key": 0.5, "door": 0.9, "room_crossing": 1.2,
+        "ball": 1.5, "goal": 2.0, "turn_penalty": 0.0, "step": 0.001,
+    },
+    "training_freq":    10,        # train (backprop) every N(=10) steps
+})
+
+
 
 # =====================================================================
 #                       EXPERIMENT SETS
@@ -405,4 +465,9 @@ exp_set_1 = [
     DQN_KEYDOORBALL_BASELINE,
     A2C_KEYDOORBALL_BASELINE,
     PPO_KEYDOORBALL_BASELINE,
+]
+
+exp_set_2 = [
+    SET2_PPO_KDB,
+    SET2_A2C_KDB,
 ]

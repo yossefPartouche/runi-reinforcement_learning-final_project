@@ -85,6 +85,7 @@ from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import Door, Goal, Key, Lava, Wall, Ball
 from minigrid.minigrid_env import MiniGridEnv as BaseMiniGridEnv
+from collections import deque
 
 # --- Configuration ---
 
@@ -328,6 +329,21 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         self.prev_door = False
         self.prev_ball = False
 
+        # --- STUDENT ADDITION ---:
+        # additional event tracking
+        self.prev_action = None
+        self.prev_pos = None
+        self.has_crossed_door = False
+        self.has_opened_door = False
+
+        self.milestone_steps = {'key': None, 'door': None, 'ball': None, 'goal': None}
+        self.action_history = []  # stores (step_idx, action)
+
+        self.pickup_step = None
+        self.door_open_step = None
+        self.pickup_ball_step = None
+        self.goal_reached_step = None
+
     # ╔═════════════════════════════════════════════════════════════════════════╗
     # ║  ⛔ DO NOT MODIFY: Core environment methods below                       ║
     # ╚═════════════════════════════════════════════════════════════════════════╝
@@ -347,6 +363,19 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         self.prev_door = False
         self.prev_ball = False
         self.inventory = []
+
+        # --- STUDENT ADDITION ---:
+        # additional event tracking
+        self.prev_action = None
+        self.prev_pos = None
+        self.has_crossed_door = False
+        self.has_opened_door = False
+
+        self.key_pickup_step = None
+        self.door_open_step = None
+        self.crossed_step = None
+        self.pickup_ball_step = None
+        self.goal_reached_step = None
 
         # Call parent reset, which internally calls _gen_grid()
         obs, info = super().reset(seed=seed, options=options)
@@ -447,10 +476,80 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         terminated = terminated and (not self.require_ball_pickup or self.is_carrying_ball())
 
         # ----- REWARD SHAPING: EDIT BELOW THIS LINE -----
+
+        # fetch reward config if it exists
+        reward_config = getattr(self, "reward_shaping", {})
+        reward = 0.0
+        self.action_history.append((self.step_count, action))
+
+        # key pickup reward (before: no key, now: have key)
+        if not self.prev_key and self.is_carrying_key():
+            reward += reward_config.get("key", 0.5)
+            self.key_pickup_step = self.step_count
+            print(f"\n🔑 Step {self.step_count}: Key picked up!")
+
+        # door opened reward (before: had key + door closed, now: door open)
+        if (self.prev_key) and (not self.prev_door) and (self.is_door_open()) and (not self.has_opened_door):
+            reward += reward_config.get("door", 0.5)
+            self.has_opened_door = True
+            self.door_open_step = self.step_count
+            print(f"🔑 🚪 Step {self.step_count}: Door opened!")
+
+            if self.key_pickup_step is not None:
+                steps_taken = self.door_open_step - self.key_pickup_step
+                if steps_taken <= 15:
+                    info["retroactive_bonus"] = {
+                        "steps_back" : steps_taken,
+                        "bonus" : 0.2
+                    }
+
+
+        # room-crossing reward
+        current_in_right_room = self.agent_pos[0] > self.partition_col
+        prev_in_right_room = (self.prev_pos[0] > self.partition_col) if self.prev_pos is not None else False
+        if (not prev_in_right_room) and (current_in_right_room) and (not self.has_crossed_door):
+            reward += reward_config.get("room_crossing", 1.0)
+            self.has_crossed_door = True
+            print(f"🚪🚶‍➡️ Step {self.step_count}: Crossed to right room!")
+            self.crossed_step = self.step_count
+
+        # ball pickup reward (before: no ball, now: have ball)
+        if not self.prev_ball and self.is_carrying_ball():
+            reward += reward_config.get("ball", 0.5)
+            print(f"⚽️ Step {self.step_count}: Ball picked up!")
+            if self.crossed_step is not None:
+                self.pickup_ball_step = self.step_count
+                steps_taken = self.pickup_ball_step - self.crossed_step
+                if steps_taken <= 15:
+                    info["retroactive_bonus"] = {
+                        "steps_back" : steps_taken,
+                        "bonus" : 0.2
+                    }
+
+
+        # goal reward
         if terminated:
-            reward = 1.0
-        else:
-            reward = 0.0
+            reward += reward_config.get("goal", 2.0)
+            print(f"🎯Step {self.step_count}: Goal reached! (+2.0)")
+            steps_taken = self.step_count - self.pickup_ball_step
+            if steps_taken <= 15:
+                info["retroactive_bonus"] = {
+                    "steps_back" : steps_taken,
+                    "bonus" : 0.2
+                }
+
+        # redundant direction-change penalty
+        if (self.prev_action is not None) and (self.prev_action in [0, 1]) and (action in [0, 1]):
+            if action != self.prev_action:   # redundant turn in opposite direction
+                reward -= reward_config.get("turn_penalty", 0.01)
+
+        # step penalty
+        reward -= reward_config.get("step", 0.001)
+
+        # store current info for event tracking in next step
+        self.prev_action = action
+        self.prev_pos = tuple(self.agent_pos)
+
         # ----- REWARD SHAPING: EDIT ABOVE THIS LINE -----
 
         return self._get_obs(obs), reward, terminated, truncated, info

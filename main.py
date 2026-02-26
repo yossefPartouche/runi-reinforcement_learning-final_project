@@ -3,7 +3,7 @@ from typing import Dict
 
 import torch
 
-from src.experiments import calibration_experiments, exp_set_1
+from src.experiments import exp_set_2
 from src.experiment_runner import Experiment
 from src.utils import analyze_inference, plot_training_curves, save_experiment_report, set_random_seed, get_device, plot_milestone_progress
 
@@ -48,7 +48,7 @@ def main():
     device = get_device()
 
     # define exp set:
-    experiments = calibration_experiments
+    experiments = exp_set_2
     for exp in experiments:
         run_single_experiment(exp["config"], exp["name"], device=device)
 

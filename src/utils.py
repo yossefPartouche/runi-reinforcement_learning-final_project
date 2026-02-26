@@ -31,7 +31,10 @@ def set_random_seed(seed: int) -> None:
 
 def get_device() -> torch.device:
     """Returns the device that runs training (GPU/CPU)"""
-    processor_type = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.backends.mps.is_available():
+        processor_type = "mps"
+    else:
+        processor_type = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {processor_type}")
     return torch.device(processor_type)
 
