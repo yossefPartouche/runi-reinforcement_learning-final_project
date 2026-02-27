@@ -168,10 +168,10 @@ class SimpleGridEnv(BaseMiniGridEnv):
         # ║  ✅ STUDENT TODO: Update observation_space to match preprocessing   ║
         # ╚═════════════════════════════════════════════════════════════════════╝
         self.observation_space = spaces.Box(
-            low=0,
-            high=255,
+            low=0.0,
+            high=1.0,
             shape=(84, 84, 1),
-            dtype=np.uint8
+            dtype=np.float32
         )
         # ╔═════════════════════════════════════════════════════════════════════╗
         # ║                     END OF EDITABLE SECTION                         ║
@@ -315,10 +315,10 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         # ║  ✅ STUDENT TODO: Update observation_space to match preprocessing   ║
         # ╚═════════════════════════════════════════════════════════════════════╝
         self.observation_space = spaces.Box(
-            low=0,
-            high=255,
+            low=0.0,
+            high=1.0,
             shape=(84, 84, 1),
-            dtype=np.uint8
+            dtype=np.float32
         )
         # ╔═════════════════════════════════════════════════════════════════════╗
         # ║                     END OF EDITABLE SECTION                         ║
@@ -482,6 +482,18 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         reward = 0.0
         self.action_history.append((self.step_count, action))
 
+        # Peanlize invalid interactions #
+        front_obj = self.grid.get(*self.front_pos)
+
+        if action == 3:
+            if not (front_obj and front_obj.type in ['key', 'ball'] and self.carrying is None):
+                reward -= reward_config.get("invalid_action", 0.02)
+        
+        if action == 5:
+            if not (front_obj and front_obj.type == 'door' and self.is_carrying_key()):
+                reward -= reward_config.get("invalid_action", 0.02)
+        # Peanlize invalid interactions #
+        
         # key pickup reward (before: no key, now: have key)
         if not self.prev_key and self.is_carrying_key():
             reward += reward_config.get("key", 0.5)
@@ -498,6 +510,7 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
             if self.key_pickup_step is not None:
                 steps_taken = self.door_open_step - self.key_pickup_step
                 if steps_taken <= 15:
+                    print(f"Running Retroactive reward on past {steps_taken} steps")
                     info["retroactive_bonus"] = {
                         "steps_back" : steps_taken,
                         "bonus" : 0.2
@@ -521,6 +534,7 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
                 self.pickup_ball_step = self.step_count
                 steps_taken = self.pickup_ball_step - self.crossed_step
                 if steps_taken <= 15:
+                    print(f"Running Retroactive reward on past {steps_taken} steps")
                     info["retroactive_bonus"] = {
                         "steps_back" : steps_taken,
                         "bonus" : 0.2
@@ -530,9 +544,10 @@ class KeyDoorBallEnv(BaseMiniGridEnv):
         # goal reward
         if terminated:
             reward += reward_config.get("goal", 2.0)
-            print(f"🎯Step {self.step_count}: Goal reached! (+2.0)")
+            print(f"🎯Step {self.step_count}: Goal reached! (+5.0)")
             steps_taken = self.step_count - self.pickup_ball_step
             if steps_taken <= 15:
+                print(f"Running Retroactive reward on past {steps_taken} steps")
                 info["retroactive_bonus"] = {
                     "steps_back" : steps_taken,
                     "bonus" : 0.2
@@ -610,7 +625,8 @@ def pre_process(img):
     """
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     resized = cv2.resize(gray, (84, 84), interpolation=cv2.INTER_AREA)
-    return np.expand_dims(resized, axis=-1)
+    normalized = resized.astype(np.float32)/255.0
+    return np.expand_dims(normalized, axis=0)
 
 if __name__ == "__main__":
 

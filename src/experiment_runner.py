@@ -76,7 +76,10 @@ class Experiment:
         print(f"Starting training: {self.agent.name} agent on environment {self.config['env_name']}")
 
         update_per_step = self.config.get("use_per_step_update", True)
+        training_freq = self.config.get("training_freq", 256)
         metrics_handler = MetricsHandler(num_episodes=self.training_episodes, window_size=EPISODE_WINDOW_SIZE)   
+
+        trajectories = []
 
         for episode in range(1, self.training_episodes + 1):
             # episode resets:
@@ -84,10 +87,9 @@ class Experiment:
             done = False
             episode_rewards = 0
             episode_steps = 0
-            trajectories = []  # for episode-level updates (A2C)
 
             # todo: record at trianing end as well (last episode)?
-            record_episode_video = (episode == self.training_episodes // 2)
+            record_episode_video = (episode == self.training_episodes // 5)
             if record_episode_video:
                 self.video_recorder.start(stage="mid-training")
             
@@ -100,6 +102,28 @@ class Experiment:
                 log_prob = 0.0  # dummy value for A2C, DQN
                 if isinstance(action, tuple):   # handle PPO choose_action output
                     action, log_prob = action
+                
+                # Action Tracker injection
+                act_idx = int(action.item() if hasattr(action, 'item') else action)
+                action_label = act_idx
+
+                if act_idx == 3: #Pickup
+                    obj_infront = self.env.grid.get(*self.env.front_pos)
+                    # Valid action call := Agent facing key/Ball and Hands are empty
+                    if obj_infront and obj_infront.type in ['key', 'ball'] and self.env.carrying is None:
+                        action_label = "Valid_Pickup"
+                    else:
+                        action_label = "Invalid_Pickup"
+                
+                elif act_idx == 4: #Toggle
+                    obj_infront = self.env.grid.get(*self.env.front_pos)
+                    # Valid action call := Agent facing door and Carrying Key
+                    if obj_infront and obj_infront.type == 'door' and self.env.is_carrying_key():
+                        action_label = "Valid_Toggle"
+                    else:
+                        action_label = "Invalid_Toggle"  
+
+                metrics_handler.track_action(action_label)
 
                 # env step
                 next_obs, reward, terminated, truncated, info = self.env.step(action)
@@ -121,17 +145,21 @@ class Experiment:
                         # Repack the epsiode trajectory 
                         trajectories[-i] = (p_obs, p_act, new_rew, p_nobs, p_done, p_logprob)
                         
-                        episode_reward += bonus_val
+                        episode_rewards += bonus_val
 
                 # todo: base this condition on agent type?
                 # agent step
                 if update_per_step:
                     # DQN: store transition, update, epsilon decay every step
-                    self.agent.step(obs=obs, action=action, reward=reward, next_obs=next_obs, done=done)
+                    self.agent.step(obs=obs, action=action, reward=reward, next_obs=next_obs, done=terminated)
                 else:
                     # A2C/PPO: store episode trajectory, update at episode end 
                     # note: log_prob used by PPO, ignored by A2C
                     trajectories.append((obs, action, reward, next_obs, float(done), log_prob))
+
+                    if len(trajectories) >= training_freq:
+                        self.agent.update(trajectories)
+                        trajectories = []
 
                 # updates:
                 episode_rewards += reward

@@ -70,6 +70,22 @@ class MetricsHandler:
     def __init__(self, num_episodes: int, window_size: int = None):
         self.num_episodes = num_episodes
         self.window = window_size
+        
+        # Suited Action Choice Ratio Measure
+        self.action_categories = [
+            0, 1, 2,  
+            "Valid_Pickup", "Invalid_Pickup", 
+            "Valid_Toggle", "Invalid_Toggle"
+        ]
+
+        # -- Action Tracking --
+        self.display_names = {
+            0: "L", 1: "R", 2: "Fwd",
+            "Valid_Pickup": "GoodPick", "Invalid_Pickup": "BadPick",
+            "Valid_Toggle": "GoodTogl", "Invalid_Toggle": "BadTogl"
+        }
+        self.interval_action_counts = {k: 0 for k in self.action_categories}
+
         if window_size:
             self.rewards = deque(maxlen=window_size)
             self.step_counts = deque(maxlen=window_size)
@@ -83,6 +99,10 @@ class MetricsHandler:
         self.rewards.append(reward)
         self.step_counts.append(steps)
         self.success_counts.append(int(success))
+
+    def track_action(self, action_label: int):
+        if action_label in self.interval_action_counts:
+            self.interval_action_counts[action_label] += 1
 
     @property
     def avg_reward(self) -> float:
@@ -113,14 +133,29 @@ class MetricsHandler:
             "train_window_avg_steps": self.avg_steps
         }
 
-    def print_training_status(self, episode: int, epsilon: float | None = None) -> None:
+    def print_training_status(self, episode: int, epsilon: float | None = None, tb_writer=None) -> None:
         print(f"\rEpisode {episode}/{self.num_episodes}", end="", flush=True)
+
         if self.window and episode % self.window == 0:
             epsilon_str = f"{epsilon:.3f}" if epsilon is not None else "n/a" # handle epsilon=None case
+
+            total_actions = sum(self.interval_action_counts.values())
+            act_str = ""
+            if total_actions > 0 :
+                pcts = {self.display_names[k]: (v / total_actions)*100 
+                        for k, v in self.interval_action_counts.items()}
+                
+                act_str = " | Act: [" + ", ".join([f"{k}:{v:.1f}%" for k, v in pcts.items()]) + "]"
+
+                if tb_writer:
+                    for display_name, pct in pcts.items():
+                        tb_writer.add_scalar(f'Actions/{display_name}_%', pct, episode)
+
             print(f"\rEpisodes {episode-self.window}-{episode}/{self.num_episodes} | "
                   f"Avg R: {self.avg_reward:.2f} | Avg Steps: {self.avg_steps:.1f} | "
-                  f"Success Rate: {self.success_rate:.2f} | ε: {epsilon_str}")
-
+                  f"Success Rate: {self.success_rate:.2f} | ε: {epsilon_str}{act_str}")
+            
+            self.interval_action_counts = {k: 0 for k in self.action_categories}
 
 # ##########
 # UTILS FOR RECORDING RESULTS (PLOTTING, REPORTS)
